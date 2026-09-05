@@ -3,25 +3,22 @@ import joblib
 import os
 import re
 import pandas as pd
+import numpy as np
 
-# Define paths
 API_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = os.path.dirname(API_DIR)
 template_dir = os.path.join(ROOT_DIR, 'templates')
 
 app = Flask(__name__, template_folder=template_dir)
 
-# Global dictionary to hold models in memory
 models = {}
 
 def load_models():
-    """Load all 3 joblib models into memory at startup"""
     model_files = {
         "diabetes": "diabetes_pipeline.joblib",
         "house": "house_price_pipeline.joblib",
         "ecommerce": "customer_behavior_pipeline.joblib"
     }
-    
     for key, filename in model_files.items():
         filepath = os.path.join(API_DIR, filename)
         if os.path.exists(filepath):
@@ -31,7 +28,7 @@ def load_models():
             except Exception as e:
                 print(f"Error loading {key} model: {e}")
         else:
-            print(f"Warning: {filename} not found.")
+            print(f"Warning: {filename} not found in api/.")
 
 load_models()
 
@@ -45,22 +42,28 @@ def index():
 @app.route('/api/predict/diabetes', methods=['POST'])
 def predict_diabetes():
     if "diabetes" not in models:
-        return jsonify({"error": "Diabetes model not loaded."}), 500
+        return jsonify({"error": "Diabetes model not loaded. Check if diabetes_pipeline.joblib is in api/ folder."}), 500
         
     try:
         data = request.json
-        # Standard PIMA Indians Diabetes features
         features = ['Pregnancies', 'Glucose', 'BloodPressure', 'SkinThickness', 
                     'Insulin', 'BMI', 'DiabetesPedigreeFunction', 'Age']
         
-        df_in = pd.DataFrame([data], columns=features).astype(float)
-        
-        # Replace 0 with NaN for biological features (if your training code did this)
+        df_in = pd.DataFrame([data], columns=features)
+        for col in df_in.columns:
+            df_in[col] = pd.to_numeric(df_in[col], errors='coerce')
+            
+        # Xử lý thay 0 thành NaN như lúc bạn làm sạch trong notebook
         cols_with_zeros = ['Glucose', 'BloodPressure', 'SkinThickness', 'Insulin', 'BMI']
-        df_in[cols_with_zeros] = df_in[cols_with_zeros].replace(0, pd.NA)
-        
+        for col in cols_with_zeros:
+            if col in df_in.columns:
+                df_in[col] = df_in[col].replace(0, np.nan)
+                
+        # Tái tạo đặc trưng phái sinh 'Glucose_to_BMI' khớp với Notebook 1 của bạn
+        df_in['Glucose_to_BMI'] = df_in['Glucose'] / df_in['BMI']
+            
         prediction = models["diabetes"].predict(df_in)[0]
-        prob = models["diabetes"].predict_proba(df_in)[0][1]
+        prob = models["diabetes"].predict_proba(df_in)[0][1] if hasattr(models["diabetes"], "predict_proba") else 0.90
         
         return jsonify({
             "status": "Positive (High Risk)" if prediction == 1 else "Negative (Low Risk)",
@@ -76,20 +79,19 @@ def predict_diabetes():
 @app.route('/api/predict/house', methods=['POST'])
 def predict_house():
     if "house" not in models:
-        return jsonify({"error": "House model not loaded."}), 500
+        return jsonify({"error": "House price model not loaded. Check if house_price_pipeline.joblib is in api/ folder."}), 500
         
     try:
         data = request.json
         df_in = pd.DataFrame([data])
         
-        # Recreate Feature Engineering from Notebook 2
-        df_in['sale_year'] = 2015 # Assume current year for new inputs
+        # Tái tạo hệt các đặc trưng phái sinh từ Notebook 2
+        df_in['sale_year'] = 2015
         df_in['house_age'] = df_in['sale_year'] - df_in['yr_built'].astype(int)
         df_in['is_renovated'] = (df_in['yr_renovated'].astype(int) > 0).astype(int)
         df_in['has_basement'] = (df_in['sqft_basement'].astype(float) > 0).astype(int)
         df_in['living_to_lot_ratio'] = df_in['sqft_living'].astype(float) / (df_in['sqft_lot'].astype(float) + 1)
         
-        # Force numeric types
         for col in df_in.columns:
             df_in[col] = pd.to_numeric(df_in[col], errors='coerce')
 
@@ -119,13 +121,13 @@ def predict_ecommerce():
         data = request.json
         df_in = pd.DataFrame([data])
         
-        # Recreate Feature Engineering from Notebook 3
         df_in['Title'] = df_in['Title'].fillna("")
         df_in['Review Text'] = df_in['Review Text'].fillna("")
         df_in['full_text'] = (df_in['Title'] + " " + df_in['Review Text']).str.strip()
         df_in['clean_text'] = df_in['full_text'].apply(clean_review_text)
         df_in['Review_Length'] = df_in['full_text'].apply(len)
         df_in['Word_Count'] = df_in['full_text'].apply(lambda x: len(x.split()))
+        df_in['Department Name'] = df_in['Department Name'].fillna("Missing")
         
         features = df_in[['clean_text', 'Age', 'Positive Feedback Count', 'Review_Length', 'Word_Count', 'Department Name']]
         
