@@ -1,0 +1,236 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PTIT Intelligent Systems - Assm 02</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Outfit:wght@400;600;800&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        :root {
+            --bg-gradient: linear-gradient(135deg, #0f172a 0%, #1e1b4b 100%);
+            --glass-bg: rgba(30, 41, 59, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --accent-primary: #10b981; 
+            --accent-secondary: #6366f1; 
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Inter', sans-serif; background: var(--bg-gradient); color: var(--text-main); min-height: 100vh; display: flex; flex-direction: column; }
+        header { padding: 2rem 2rem 1rem; text-align: center; }
+        h1 { font-family: 'Outfit', sans-serif; font-size: 2.5rem; background: linear-gradient(to right, #ffffff, #a7f3d0, #c7d2fe); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        
+        /* Navigation Tabs */
+        .tabs { display: flex; justify-content: center; gap: 1rem; margin-bottom: 2rem; }
+        .tab-btn { background: var(--glass-bg); border: 1px solid var(--glass-border); color: var(--text-muted); padding: 0.75rem 1.5rem; border-radius: 12px; cursor: pointer; font-family: 'Outfit', sans-serif; font-weight: 600; transition: all 0.3s; }
+        .tab-btn.active { background: var(--accent-secondary); color: #fff; border-color: var(--accent-secondary); }
+        .tab-btn:hover:not(.active) { border-color: var(--accent-primary); color: #fff; }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 1.5rem; display: grid; grid-template-columns: 1.2fr 0.8fr; gap: 2rem; flex-grow: 1; }
+        @media (max-width: 968px) { .container { grid-template-columns: 1fr; } }
+        
+        .glass-panel { background: var(--glass-bg); backdrop-filter: blur(16px); border: 1px solid var(--glass-border); border-radius: 24px; padding: 2rem; box-shadow: 0 8px 32px rgba(0,0,0,0.37); }
+        h2.panel-title { font-family: 'Outfit', sans-serif; font-size: 1.4rem; margin-bottom: 1.5rem; border-bottom: 1px solid rgba(255,255,255,0.05); padding-bottom: 0.75rem; }
+        h2.panel-title i { color: var(--accent-primary); margin-right: 10px; }
+
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; }
+        .form-group { display: flex; flex-direction: column; gap: 0.5rem; }
+        .form-group.full { grid-column: span 2; }
+        label { font-size: 0.85rem; color: var(--text-muted); font-weight: 500; }
+        input, select, textarea { background: rgba(15, 23, 42, 0.6); border: 1px solid var(--glass-border); border-radius: 12px; padding: 0.75rem; color: #fff; outline: none; }
+        input:focus, select:focus, textarea:focus { border-color: var(--accent-primary); }
+        textarea { resize: vertical; min-height: 80px; }
+        
+        .btn-predict { grid-column: span 2; background: linear-gradient(135deg, var(--accent-primary) 0%, #059669 100%); border: none; border-radius: 14px; color: #fff; font-family: 'Outfit'; font-size: 1.1rem; font-weight: 600; padding: 1rem; cursor: pointer; transition: transform 0.3s; margin-top: 1rem; }
+        .btn-predict:hover { transform: translateY(-2px); }
+
+        .result-panel { display: flex; flex-direction: column; justify-content: center; align-items: center; text-align: center; }
+        .price-value { font-family: 'Outfit'; font-size: 2.5rem; font-weight: 800; color: var(--accent-primary); margin: 1rem 0; }
+        
+        .app-view { display: none; animation: fadeIn 0.4s ease; }
+        .app-view.active { display: block; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        footer { text-align: center; padding: 2rem; color: var(--text-muted); font-size: 0.85rem; }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>Intelligent Systems Portal</h1>
+        <div style="color: var(--text-muted)">Assignment 02 - Deployed ML Pipelines</div>
+    </header>
+
+    <div class="tabs">
+        <button class="tab-btn active" onclick="showTab('app-diabetes')"><i class="fa-solid fa-notes-medical"></i> Diabetes</button>
+        <button class="tab-btn" onclick="showTab('app-house')"><i class="fa-solid fa-house"></i> House Price</button>
+        <button class="tab-btn" onclick="showTab('app-ecommerce')"><i class="fa-solid fa-cart-shopping"></i> E-Commerce</button>
+    </div>
+
+    <div class="container">
+        <!-- LEFT PANEL: FORMS -->
+        <div class="glass-panel">
+            
+            <!-- APP 1: DIABETES -->
+            <div id="app-diabetes" class="app-view active">
+                <h2 class="panel-title"><i class="fa-solid fa-stethoscope"></i> Clinical Data Input</h2>
+                <form id="form-diabetes" onsubmit="submitDiabetes(event)">
+                    <div class="form-grid">
+                        <div class="form-group"><label>Age</label><input type="number" name="Age" value="33" required></div>
+                        <div class="form-group"><label>BMI</label><input type="number" step="0.1" name="BMI" value="33.6" required></div>
+                        <div class="form-group"><label>Glucose</label><input type="number" name="Glucose" value="148" required></div>
+                        <div class="form-group"><label>Blood Pressure</label><input type="number" name="BloodPressure" value="72" required></div>
+                        <div class="form-group"><label>Insulin</label><input type="number" name="Insulin" value="0" required></div>
+                        <div class="form-group"><label>Skin Thickness</label><input type="number" name="SkinThickness" value="35" required></div>
+                        <div class="form-group"><label>Pregnancies</label><input type="number" name="Pregnancies" value="6" required></div>
+                        <div class="form-group"><label>Pedigree Function</label><input type="number" step="0.001" name="DiabetesPedigreeFunction" value="0.627" required></div>
+                        <button type="submit" class="btn-predict"><i class="fa-solid fa-brain"></i> Predict Diabetes Risk</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- APP 2: HOUSE PRICE -->
+            <div id="app-house" class="app-view">
+                <h2 class="panel-title"><i class="fa-solid fa-building"></i> Property Specs (King County)</h2>
+                <form id="form-house" onsubmit="submitHouse(event)">
+                    <div class="form-grid">
+                        <div class="form-group"><label>Bedrooms</label><input type="number" name="bedrooms" value="3" required></div>
+                        <div class="form-group"><label>Bathrooms</label><input type="number" step="0.25" name="bathrooms" value="2.25" required></div>
+                        <div class="form-group"><label>Sqft Living</label><input type="number" name="sqft_living" value="2570" required></div>
+                        <div class="form-group"><label>Sqft Lot</label><input type="number" name="sqft_lot" value="7242" required></div>
+                        <div class="form-group"><label>Floors</label><input type="number" step="0.5" name="floors" value="2" required></div>
+                        <div class="form-group"><label>Grade (1-13)</label><input type="number" name="grade" value="7" required></div>
+                        <div class="form-group"><label>Year Built</label><input type="number" name="yr_built" value="1951" required></div>
+                        <div class="form-group"><label>Year Renovated</label><input type="number" name="yr_renovated" value="1991" required></div>
+                        
+                        <!-- Hidden inputs for dataset specific features to keep UI clean -->
+                        <input type="hidden" name="waterfront" value="0">
+                        <input type="hidden" name="view" value="0">
+                        <input type="hidden" name="condition" value="3">
+                        <input type="hidden" name="sqft_above" value="2170">
+                        <input type="hidden" name="sqft_basement" value="400">
+                        <input type="hidden" name="zipcode" value="98125">
+                        <input type="hidden" name="lat" value="47.7210">
+                        <input type="hidden" name="long" value="-122.319">
+                        <input type="hidden" name="sqft_living15" value="1690">
+                        <input type="hidden" name="sqft_lot15" value="7639">
+
+                        <button type="submit" class="btn-predict"><i class="fa-solid fa-tag"></i> Estimate Price</button>
+                    </div>
+                </form>
+            </div>
+
+            <!-- APP 3: E-COMMERCE -->
+            <div id="app-ecommerce" class="app-view">
+                <h2 class="panel-title"><i class="fa-solid fa-comment-dots"></i> Customer Review</h2>
+                <form id="form-ecommerce" onsubmit="submitEcommerce(event)">
+                    <div class="form-grid">
+                        <div class="form-group full"><label>Review Title</label><input type="text" name="Title" value="Absolutely gorgeous!" required></div>
+                        <div class="form-group full"><label>Review Text</label><textarea name="Review Text" required>I love this dress so much! The fabric is silky soft and fits perfectly.</textarea></div>
+                        <div class="form-group"><label>Customer Age</label><input type="number" name="Age" value="32" required></div>
+                        <div class="form-group"><label>Upvotes</label><input type="number" name="Positive Feedback Count" value="4" required></div>
+                        <div class="form-group full">
+                            <label>Department</label>
+                            <select name="Department Name">
+                                <option value="Tops">Tops</option>
+                                <option value="Dresses" selected>Dresses</option>
+                                <option value="Bottoms">Bottoms</option>
+                                <option value="Jackets">Jackets</option>
+                            </select>
+                        </div>
+                        <button type="submit" class="btn-predict"><i class="fa-solid fa-magnifying-glass-chart"></i> Analyze Behavior</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- RIGHT PANEL: RESULT -->
+        <div class="glass-panel result-panel">
+            <h2 class="panel-title"><i class="fa-solid fa-bolt"></i> Inference Result</h2>
+            <div id="result-content" style="width: 100%; text-align: center; margin-top: 2rem;">
+                <i class="fa-solid fa-robot" style="font-size: 4rem; color: var(--text-muted); margin-bottom: 1rem;"></i>
+                <p style="color: var(--text-muted)">Submit a form to see the AI prediction.</p>
+            </div>
+        </div>
+    </div>
+
+    <footer>
+        Deployed on Vercel Serverless &bull; Intelligent System Development 2026
+    </footer>
+
+    <script>
+        function showTab(tabId) {
+            document.querySelectorAll('.app-view').forEach(el => el.classList.remove('active'));
+            document.querySelectorAll('.tab-btn').forEach(el => el.classList.remove('active'));
+            document.getElementById(tabId).classList.add('active');
+            event.currentTarget.classList.add('active');
+            
+            // Reset result panel
+            document.getElementById('result-content').innerHTML = `
+                <i class="fa-solid fa-robot" style="font-size: 4rem; color: var(--text-muted); margin-bottom: 1rem;"></i>
+                <p style="color: var(--text-muted)">Submit a form to see the AI prediction.</p>
+            `;
+        }
+
+        async function submitAPI(endpoint, formId, formatterFunc) {
+            event.preventDefault();
+            const form = document.getElementById(formId);
+            const formData = new FormData(form);
+            const data = Object.fromEntries(formData.entries());
+            
+            const resultBox = document.getElementById('result-content');
+            resultBox.innerHTML = `<i class="fa-solid fa-spinner fa-spin" style="font-size: 3rem; color: var(--accent-primary);"></i><p style="margin-top:1rem;">Processing Pipeline...</p>`;
+
+            try {
+                const response = await fetch(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(data)
+                });
+                const resData = await response.json();
+                
+                if(resData.error) throw new Error(resData.error);
+                
+                resultBox.innerHTML = formatterFunc(resData);
+            } catch (err) {
+                resultBox.innerHTML = `<i class="fa-solid fa-triangle-exclamation" style="color:#ef4444; font-size:3rem;"></i><p style="margin-top:1rem; color:#ef4444;">${err.message}</p>`;
+            }
+        }
+
+        function submitDiabetes(e) {
+            submitAPI('/api/predict/diabetes', 'form-diabetes', (data) => `
+                <div style="font-size: 1.1rem; color: var(--text-muted)">Patient Status</div>
+                <div class="price-value" style="color: ${data.prediction_class === 1 ? '#ef4444' : '#10b981'}">${data.status}</div>
+                <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; margin-top: 1rem;">
+                    <strong>Confidence:</strong> ${(data.confidence * 100).toFixed(1)}% <br>
+                    <span style="font-size: 0.85rem; color: var(--text-muted)">Model: Random Forest / Logistic Regression</span>
+                </div>
+            `);
+        }
+
+        function submitHouse(e) {
+            submitAPI('/api/predict/house', 'form-house', (data) => `
+                <div style="font-size: 1.1rem; color: var(--text-muted)">Estimated Market Value</div>
+                <div class="price-value">$${data.predicted_price.toLocaleString()}</div>
+                <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; margin-top: 1rem;">
+                    <span style="font-size: 0.85rem; color: var(--text-muted)">Engine: Gradient Boosting Regressor</span>
+                </div>
+            `);
+        }
+
+        function submitEcommerce(e) {
+            submitAPI('/api/predict/ecommerce', 'form-ecommerce', (data) => `
+                <div style="font-size: 1.1rem; color: var(--text-muted)">Customer Intention</div>
+                <div class="price-value" style="color: ${data.prediction_class === 1 ? '#10b981' : '#f59e0b'}; font-size: 2rem;">${data.status}</div>
+                <div style="background: rgba(255,255,255,0.05); padding: 1rem; border-radius: 12px; margin-top: 1rem;">
+                    <strong>Confidence:</strong> ${(data.confidence * 100).toFixed(1)}% <br>
+                    <span style="font-size: 0.85rem; color: var(--text-muted)">NLP Engine: TF-IDF + Logistic Regression</span>
+                </div>
+            `);
+        }
+    </script>
+</body>
+</html>
