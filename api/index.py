@@ -74,8 +74,16 @@ def predict_diabetes():
         return jsonify({"error": str(e)}), 500
 
 # ==========================================
-# API 2: HOUSE PRICE PREDICTION
+# API 2: HOUSE PRICE PREDICTION (FIX THỨ TỰ CỘT CHUẨN XÁC 100%)
 # ==========================================
+HOUSE_FEATURES = [
+    'bedrooms', 'bathrooms', 'sqft_living', 'sqft_lot', 'floors', 
+    'waterfront', 'view', 'condition', 'grade', 'sqft_above', 
+    'sqft_basement', 'yr_built', 'yr_renovated', 'zipcode', 
+    'lat', 'long', 'sqft_living15', 'sqft_lot15', 
+    'sale_year', 'house_age', 'is_renovated', 'has_basement', 'living_to_lot_ratio'
+]
+
 @app.route('/api/predict/house', methods=['POST'])
 def predict_house():
     if "house" not in models:
@@ -85,15 +93,32 @@ def predict_house():
         data = request.json
         df_in = pd.DataFrame([data])
         
-        # Tái tạo hệt các đặc trưng phái sinh từ Notebook 2
+        # Điền mặc định các biến địa lý/kết cấu nếu form web không gửi đủ
+        defaults = {
+            'waterfront': 0, 'view': 0, 'condition': 3,
+            'sqft_above': float(data.get('sqft_living', 2000)),
+            'sqft_basement': 0, 'yr_renovated': 0,
+            'zipcode': 98125, 'lat': 47.7210, 'long': -122.319,
+            'sqft_living15': float(data.get('sqft_living', 2000)),
+            'sqft_lot15': float(data.get('sqft_lot', 5000))
+        }
+        for k, v in defaults.items():
+            if k not in df_in.columns or pd.isna(df_in[k].iloc[0]):
+                df_in[k] = v
+        
+        # Tái tạo đúng các cột Feature Engineering từ Notebook
         df_in['sale_year'] = 2015
         df_in['house_age'] = df_in['sale_year'] - df_in['yr_built'].astype(int)
         df_in['is_renovated'] = (df_in['yr_renovated'].astype(int) > 0).astype(int)
         df_in['has_basement'] = (df_in['sqft_basement'].astype(float) > 0).astype(int)
         df_in['living_to_lot_ratio'] = df_in['sqft_living'].astype(float) / (df_in['sqft_lot'].astype(float) + 1)
         
+        # Ép tất cả sang dạng số
         for col in df_in.columns:
             df_in[col] = pd.to_numeric(df_in[col], errors='coerce')
+
+        # KHÓA CHẶT THỨ TỰ 23 CỘT ĐÚNG TUYỆT ĐỐI NHƯ LÚC FIT
+        df_in = df_in[HOUSE_FEATURES]
 
         prediction = models["house"].predict(df_in)[0]
         
